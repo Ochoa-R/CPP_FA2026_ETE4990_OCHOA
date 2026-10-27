@@ -73,6 +73,7 @@ class TestInventory(ut.TestCase):
 		self.assertNotIn("inventory", self.invEmpty.__dict__)
 		self.assertNotIn("invState", self.invEmpty.__dict__)
 		self.assertNotIn("invMenu", self.invEmpty.__dict__)
+		self.assertNotIn("maxLength", self.invEmpty.__dict__)
 
 	def testInventoryProperty(self):
 		self.assertEqual(self.invEmpty.inventory, [])
@@ -135,6 +136,32 @@ class TestInventory(ut.TestCase):
 			result = self.invFull.discard()
 		self.assertEqual(result, self.dummyItem)
 		mock.assert_called_once_with("Choose an item to discard: ")
+
+	def testAddDoesNotCallDiscardWhenNotFull(self):
+		with patch.object(self.invEmpty, 'discard') as mock:
+			for i in range(8):
+				self.invEmpty.add(self.dummyItem)
+		mock.assert_not_called()
+
+	def testAddCallsDiscardWhenFullAndChoiceIsYes(self):
+		with (
+			patch('inventory.getInput') as inputMock,
+			patch.object(self.invFull, 'discard') as discMock,
+		):
+			inputMock.side_effect = ["YES", "PEAR"]
+			self.invFull.add(self.dummyItem)
+		discMock.assert_called_once()
+		self.assertEqual(self.invFull.inventory[-1], self.dummyItem)
+
+	def testAddReturnsItemWhenFullAndChoiceIsNo(self):
+		with (
+			patch('inventory.getInput') as inputMock, 
+			patch.object(self.invFull, 'discard') as discMock
+		):
+			inputMock.return_value = "NO"
+			result = self.invFull.add(self.dummyItem)
+		discMock.assert_not_called()
+		self.assertEqual(self.dummyItem, result)
 
 # Player unittest
 class TestPlayer(ut.TestCase):
